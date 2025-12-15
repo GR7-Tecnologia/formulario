@@ -2,7 +2,6 @@
 import express from 'express';
 import cors from 'cors';
 import pool from '../src/lib/db'; // Ajuste o caminho conforme sua estrutura
-import { v4 as uuidv4 } from 'uuid';
 
 const app = express();
 const port = 3001; // Porta para a API
@@ -34,16 +33,17 @@ app.get('/api/employees/check-cpf/:cpf', async (req, res) => {
 // Endpoint para criar um novo funcionário
 app.post('/api/employees', async (req, res) => {
   const employee = req.body;
-  // Adiciona um ID único se não houver um
-  if (!employee.id) {
-    employee.id = uuidv4();
-  }
+  // O ID será gerado automaticamente pelo banco de dados.
+  // Removemos o campo ID do objeto para evitar conflitos.
+  delete employee.id; 
   
   const query = 'INSERT INTO employees SET ?';
   
   try {
     const [result] = await pool.query(query, employee);
-    res.status(201).send({ message: 'Funcionário cadastrado com sucesso!', employeeId: employee.id });
+    // A biblioteca mysql2 retorna um objeto com a propriedade insertId
+    const insertId = (result as any).insertId;
+    res.status(201).send({ message: 'Funcionário cadastrado com sucesso!', employeeId: insertId });
   } catch (error) {
     console.error('Erro ao salvar funcionário:', error);
     res.status(500).send({ message: 'Erro no servidor ao salvar funcionário.', error });
@@ -65,4 +65,3 @@ app.get('/api/employees', async (req, res) => {
 app.listen(port, () => {
   console.log(`API Server is running on http://localhost:${port}`);
 });
-

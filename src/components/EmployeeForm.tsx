@@ -10,6 +10,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "@/hooks/use-toast";
 
+// Interfaces for city/state data reflecting the JSON structure
+interface Estado {
+  sigla: string;
+  nome: string;
+  cidades: string[];
+}
+
+interface LocationData {
+  estados: Estado[];
+}
+
 const formatCPF = (value: string) => {
   const numbers = value.replace(/\D/g, "").slice(0, 11);
   return numbers
@@ -49,21 +60,27 @@ const validateCPF = (cpf: string): boolean => {
   return true;
 };
 
+const fetchAddressByCEP = async (cep: string) => {
+  const cleanCep = cep.replace(/\D/g, "");
+
+  if (cleanCep.length !== 8) {
+    throw new Error("CEP inválido");
+  }
+
+  const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+  const data = await response.json();
+
+  if (data.erro) {
+    throw new Error("CEP não encontrado");
+  }
+
+  return data;
+};
+
 const baseEmployeeSchema = z.object({
   fullName: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
   cpf: z.string().min(14, "CPF inválido").max(14, "CPF inválido")
-    .refine(validateCPF, "CPF inválido")
-    .refine(async (cpf) => {
-      if (cpf.length !== 14) return true;
-      try {
-        const response = await fetch(`http://localhost:3001/api/employees/check-cpf/${cpf}`);
-        const data = await response.json();
-        return !data.exists;
-      } catch (error) {
-        console.error("Erro ao verificar CPF:", error);
-        return false;
-      }
-    }, { message: "CPF já cadastrado." }),
+    .refine(validateCPF, "CPF inválido"),
   birthDate: z.string().min(1, "Data de nascimento é obrigatória"),
   nationality: z.string().min(1, "Nacionalidade é obrigatória"),
   birthPlace: z.string().optional(),
@@ -72,6 +89,8 @@ const baseEmployeeSchema = z.object({
   foreignCity: z.string().optional(),
   foreignState: z.string().optional(),
   street: z.string().min(3, "Rua é obrigatória"),
+  number: z.string().max(5).optional(),
+  complement: z.string().max(150).optional(),
   neighborhood: z.string().min(2, "Bairro é obrigatório"),
   zipCode: z.string().min(8, "CEP inválido"),
   city: z.string().min(2, "Cidade é obrigatória"),
@@ -123,11 +142,13 @@ const maritalStatuses = [
 const nationalities = [{ value: "Brasileira", label: "Brasileira" }, { value: "Estrangeira", label: "Estrangeira" }];
 const pixTypes = [{ value: "cpf", label: "CPF" }, { value: "phone", label: "Telefone" }, { value: "email", label: "E-mail" }];
 const relations = ["Cônjuge", "Pai", "Mãe", "Filho(a)", "Irmão(ã)", "Outro"];
-const brazilianStates = ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
 const workUnits = ["DaVinci Hotel", "Eros Motel", "Aphrodite Park Motel", "Chateau Motel", "LPM Imóveis"];
 
 export function EmployeeForm() {
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [estados, setEstados] = useState<Estado[]>([]);
+  const [cidadesNascimento, setCidadesNascimento] = useState<string[]>([]);
+
   const {
     register,
     handleSubmit,
@@ -147,6 +168,27 @@ export function EmployeeForm() {
 
   const watchNationality = watch("nationality");
   const watchHasChildren = watch("hasChildren");
+  const watchBirthPlaceState = watch("birthPlaceState");
+  const watchZipCode = watch("zipCode");
+
+  useEffect(() => {
+    fetch('/cidades/estados-cidades.json')
+      .then(res => res.json())
+      .then((data: LocationData) => {
+        if (Array.isArray(data.estados)) {
+          setEstados(data.estados);
+        }
+      })
+      .catch(err => console.error("Failed to load location data:", err));
+  }, []);
+
+  useEffect(() => {
+    if (watchBirthPlaceState && Array.isArray(estados)) {
+      const estadoSelecionado = estados.find(e => e.sigla === watchBirthPlaceState);
+      setCidadesNascimento(estadoSelecionado?.cidades || []);
+      setValue('birthPlace', ''); 
+    }
+  }, [watchBirthPlaceState, estados, setValue]);
 
   useEffect(() => {
     if (watchNationality === 'Brasileira') {
@@ -157,9 +199,32 @@ export function EmployeeForm() {
     } else if (watchNationality === 'Estrangeira') {
       setValue('birthPlace', '');
       setValue('birthPlaceState', '');
+      setCidadesNascimento([]);
       clearErrors(['birthPlace', 'birthPlaceState']);
     }
   }, [watchNationality, setValue, clearErrors]);
+
+  const handleCepBlur = async () => {
+    const cep = watchZipCode;
+    if (!cep) return;
+  
+    try {
+      const data = await fetchAddressByCEP(cep);
+  
+      setValue("street", data.logradouro || "");
+      setValue("neighborhood", data.bairro || "");
+      setValue("city", data.localidade || "");
+      setValue("state", data.uf || "");
+
+      clearErrors(["zipCode", "street", "neighborhood", "city", "state"]);
+    } catch (error: any) {
+      toast({
+        title: "CEP inválido",
+        description: error.message || "Não foi possível localizar o endereço.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const onSubmit = async (data: EmployeeFormData) => {
     const employeeData = {
@@ -168,6 +233,8 @@ export function EmployeeForm() {
       birthDate: data.birthDate,
       nationality: data.nationality,
       street: data.street,
+      number: data.number,
+      complement: data.complement,
       neighborhood: data.neighborhood,
       zipCode: data.zipCode,
       city: data.city,
@@ -199,11 +266,13 @@ export function EmployeeForm() {
       const result = await response.json();
 
       if (!response.ok) {
-        if (result.error?.code === 'ER_DUP_ENTRY') {
-          throw new Error("CPF já cadastrado.");
+        if (result.message && result.message.includes('Duplicate entry')) {
+           toast({ title: "Erro ao salvar!", description: "Este CPF já está cadastrado.", variant: "destructive" });
+        } else {
+           const errorMessage = result.error?.sqlMessage || result.message || 'Ocorreu um erro no servidor.';
+           throw new Error(errorMessage);
         }
-        const errorMessage = result.error?.sqlMessage || result.message || 'Ocorreu um erro no servidor.';
-        throw new Error(errorMessage);
+        return; 
       }
 
       setIsSubmitted(true);
@@ -236,6 +305,7 @@ export function EmployeeForm() {
   const pError = (msg: string | undefined) => msg && (
     <p className="text-sm text-destructive flex items-center gap-1"><AlertCircle className="w-4 h-4" />{msg}</p>
   );
+  const brazilianStates = Array.isArray(estados) ? estados.map(e => e.sigla) : [];
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pb-24">
@@ -248,8 +318,17 @@ export function EmployeeForm() {
           <div className="input-group"><Label htmlFor="nationality">Nacionalidade *</Label><Select onValueChange={(value) => setValue("nationality", value)} value={watchNationality}><SelectTrigger className="h-12"><SelectValue /></SelectTrigger><SelectContent>{nationalities.map((nat) => <SelectItem key={nat.value} value={nat.value}>{nat.label}</SelectItem>)}</SelectContent></Select>{pError(errors.nationality?.message)}</div>
           {watchNationality === 'Brasileira' && (
             <div className="grid grid-cols-3 gap-3 animate-fade-in">
-              <div className="input-group col-span-2"><Label htmlFor="birthPlace">Naturalidade (Cidade) *</Label><Input id="birthPlace" placeholder="Cidade de nascimento" {...register("birthPlace")} />{pError(errors.birthPlace?.message)}</div>
-              <div className="input-group"><Label htmlFor="birthPlaceState">UF *</Label><Select onValueChange={(value) => setValue("birthPlaceState", value)}><SelectTrigger className="h-12"><SelectValue placeholder="UF" /></SelectTrigger><SelectContent>{brazilianStates.map((uf) => <SelectItem key={uf} value={uf}>{uf}</SelectItem>)}</SelectContent></Select>{pError(errors.birthPlaceState?.message)}</div>
+               <div className="input-group"><Label htmlFor="birthPlaceState">UF *</Label><Select onValueChange={(value) => setValue("birthPlaceState", value)}><SelectTrigger className="h-12"><SelectValue placeholder="UF" /></SelectTrigger><SelectContent>{brazilianStates.map((uf) => <SelectItem key={uf} value={uf}>{uf}</SelectItem>)}</SelectContent></Select>{pError(errors.birthPlaceState?.message)}</div>
+              <div className="input-group col-span-2">
+                <Label htmlFor="birthPlace">Naturalidade (Cidade) *</Label>
+                <Select onValueChange={(value) => setValue('birthPlace', value)} disabled={!watchBirthPlaceState || cidadesNascimento.length === 0}>
+                  <SelectTrigger className="h-12"><SelectValue placeholder="Selecione a cidade" /></SelectTrigger>
+                  <SelectContent>
+                    {cidadesNascimento.map(cidade => <SelectItem key={cidade} value={cidade}>{cidade}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {pError(errors.birthPlace?.message)}
+              </div>
             </div>
           )}
           {watchNationality === 'Estrangeira' && (
@@ -268,13 +347,33 @@ export function EmployeeForm() {
       <section className="form-section animate-fade-in" style={{ animationDelay: "0.12s" }}>
         <h2 className="form-section-title"><MapPin className="w-5 h-5 text-primary" />Endereço</h2>
         <div className="space-y-4">
-          <div className="input-group"><Label htmlFor="street">Rua / Logradouro *</Label><Input id="street" placeholder="Rua, número, complemento" {...register("street")} />{pError(errors.street?.message)}</div>
-          <div className="input-group"><Label htmlFor="neighborhood">Bairro *</Label><Input id="neighborhood" placeholder="Bairro" {...register("neighborhood")} />{pError(errors.neighborhood?.message)}</div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="input-group"><Label htmlFor="zipCode">CEP *</Label><Input id="zipCode" placeholder="00000-000" {...register("zipCode")} />{pError(errors.zipCode?.message)}</div>
-            <div className="input-group col-span-2"><Label htmlFor="city">Cidade *</Label><Input id="city" placeholder="Cidade" {...register("city")} />{pError(errors.city?.message)}</div>
+          {/* CEP como primeiro campo */}
+          <div className="input-group">
+            <Label htmlFor="zipCode">CEP *</Label>
+            <Input id="zipCode" placeholder="00000-000" {...register("zipCode")} onBlur={handleCepBlur} />
+            {pError(errors.zipCode?.message)}
           </div>
-          <div className="input-group"><Label htmlFor="state">Estado *</Label><Select onValueChange={(value) => setValue("state", value)}><SelectTrigger className="h-12"><SelectValue placeholder="Selecione o estado" /></SelectTrigger><SelectContent>{brazilianStates.map((uf) => <SelectItem key={uf} value={uf}>{uf}</SelectItem>)}</SelectContent></Select>{pError(errors.state?.message)}</div>
+          
+          <div className="grid grid-cols-3 gap-3">
+            <div className="input-group col-span-2"><Label htmlFor="street">Rua / Logradouro *</Label><Input id="street" placeholder="Ex: Rua Principal" {...register("street")} />{pError(errors.street?.message)}</div>
+            <div className="input-group"><Label htmlFor="number">Número</Label><Input id="number" placeholder="123A" {...register("number")} />{pError(errors.number?.message)}</div>
+          </div>
+          
+          <div className="input-group"><Label htmlFor="complement">Complemento</Label><Input id="complement" placeholder="Apto 101, Bloco C" {...register("complement")} />{pError(errors.complement?.message)}</div>
+          <div className="input-group"><Label htmlFor="neighborhood">Bairro *</Label><Input id="neighborhood" placeholder="Bairro" {...register("neighborhood")} />{pError(errors.neighborhood?.message)}</div>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <div className="input-group">
+              <Label htmlFor="city">Cidade *</Label>
+              <Input id="city" placeholder="Cidade" {...register("city")} />
+              {pError(errors.city?.message)}
+            </div>
+            <div className="input-group">
+              <Label htmlFor="state">Estado *</Label>
+              <Input id="state" placeholder="Estado" {...register("state")} />
+              {pError(errors.state?.message)}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -299,7 +398,9 @@ export function EmployeeForm() {
       <section className="form-section animate-fade-in" style={{ animationDelay: "0.25s" }}>
         <h2 className="form-section-title"><Droplets className="w-5 h-5 text-primary" />Informações de Saúde</h2>
         <div className="space-y-4">
-          <div className="input-group"><Label>Tipo Sanguíneo *</Label><div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mt-2">{bloodTypes.map((type) => <label key={type} className="flex items-center justify-center h-12 rounded-lg border-2 border-input bg-card cursor-pointer transition-all hover:border-primary/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5 text-center px-2"><input type="radio" value={type} className="sr-only" {...register("bloodType")} /><span className="font-medium text-foreground text-sm">{type}</span></label>)}</div>{pError(errors.bloodType?.message)}</div>
+          <div className="input-group"><Label>Tipo Sanguíneo *</Label><div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mt-2">
+            {bloodTypes.map((type) => <label key={type} className="flex items-center justify-center h-12 rounded-lg border-2 border-input bg-card cursor-pointer transition-all hover:border-primary/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5 text-center px-2"><input type="radio" value={type} className="sr-only" {...register("bloodType")} /><span className="font-medium text-foreground text-sm">{type}</span></label>)}
+          </div>{pError(errors.bloodType?.message)}</div>
         </div>
       </section>
 
@@ -315,7 +416,9 @@ export function EmployeeForm() {
       <section className="form-section animate-fade-in" style={{ animationDelay: "0.35s" }}>
         <h2 className="form-section-title"><Building2 className="w-5 h-5 text-primary" />Unidade de Trabalho</h2>
         <div className="space-y-4">
-          <div className="input-group"><Label>Em qual unidade você trabalha? *</Label><div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">{workUnits.map((unit) => <label key={unit} className="flex items-center gap-3 h-12 px-4 rounded-lg border-2 border-input bg-card cursor-pointer transition-all hover:border-primary/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5"><input type="radio" value={unit} className="sr-only" {...register("workUnit")} /><Building2 className="w-5 h-5 text-muted-foreground" /><span className="font-medium text-foreground">{unit}</span></label>)}</div>{pError(errors.workUnit?.message)}</div>
+          <div className="input-group"><Label>Em qual unidade você trabalha? *</Label><div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+            {workUnits.map((unit) => <label key={unit} className="flex items-center gap-3 h-12 px-4 rounded-lg border-2 border-input bg-card cursor-pointer transition-all hover:border-primary/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5"><input type="radio" value={unit} className="sr-only" {...register("workUnit")} /><Building2 className="w-5 h-5 text-muted-foreground" /><span className="font-medium text-foreground">{unit}</span></label>)}
+          </div>{pError(errors.workUnit?.message)}</div>
         </div>
       </section>
 
