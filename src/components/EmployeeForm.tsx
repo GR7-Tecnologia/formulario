@@ -121,7 +121,7 @@ const maritalStatuses = [
   { value: "stable_union", label: "União Estável" },
 ];
 const nationalities = [{ value: "Brasileira", label: "Brasileira" }, { value: "Estrangeira", label: "Estrangeira" }];
-const pixTypes = [{ value: "cpf", label: "CPF" }, { value: "phone", label: "Telefone" }, { value: "email", label: "E-mail" }, { value: "random", label: "Chave Aleatória" }];
+const pixTypes = [{ value: "cpf", label: "CPF" }, { value: "phone", label: "Telefone" }, { value: "email", label: "E-mail" }];
 const relations = ["Cônjuge", "Pai", "Mãe", "Filho(a)", "Irmão(ã)", "Outro"];
 const brazilianStates = ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
 const workUnits = ["DaVinci Hotel", "Eros Motel", "Aphrodite Park Motel", "Chateau Motel", "LPM Imóveis"];
