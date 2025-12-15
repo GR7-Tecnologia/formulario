@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,8 +25,8 @@ const AdminLogin = () => {
       return;
     }
 
-    const success = login(username, password);
-    if (success) {
+    if (username === 'admin' && password === 'admin123') {
+      login();
       toast.success("Login realizado com sucesso!");
       navigate("/admin");
     } else {

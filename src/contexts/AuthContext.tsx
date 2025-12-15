@@ -1,35 +1,46 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+
+import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  login: (username: string, password: string) => boolean;
+  login: () => void;
   logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const ADMIN_CREDENTIALS = {
-  username: "admin",
-  password: "admin123",
-};
-
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return sessionStorage.getItem("isAdminAuthenticated") === "true";
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // Initialize state from localStorage
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    // Check for token in localStorage on initial load
+    return typeof window !== 'undefined' && !!localStorage.getItem('authToken');
   });
 
-  const login = (username: string, password: string): boolean => {
-    if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
-      setIsAuthenticated(true);
-      sessionStorage.setItem("isAdminAuthenticated", "true");
-      return true;
-    }
-    return false;
+  useEffect(() => {
+    // Optional: Add a listener for storage changes across tabs
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'authToken') {
+        setIsAuthenticated(!!event.newValue);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
+  const login = () => {
+    // On successful login, set a token
+    localStorage.setItem('authToken', 'true'); // Using a simple string
+    setIsAuthenticated(true);
   };
 
   const logout = () => {
+    // On logout, remove the token
+    localStorage.removeItem('authToken');
     setIsAuthenticated(false);
-    sessionStorage.removeItem("isAdminAuthenticated");
   };
 
   return (
@@ -37,12 +48,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
-}
+};
 
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}
+};
