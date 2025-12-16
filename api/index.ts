@@ -5,7 +5,7 @@ import cors from 'cors';
 import pool from './lib/db.js'; 
 
 const app = express();
-const port = 3001; // Porta para a API
+const port = 3001; // Porta para a API local
 
 app.use(cors());
 app.use(express.json());
@@ -62,7 +62,10 @@ app.get('/employees', async (req, res) => {
     }
 });
 
-
+// Inicia o servidor para desenvolvimento local
 app.listen(port, () => {
   console.log(`API Server is running on http://localhost:${port}`);
 });
+
+// Export the app for Vercel
+export default app;
