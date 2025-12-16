@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import pool from '../src/lib/db'; // Ajuste o caminho conforme sua estrutura
+import pool from './lib/db'; // Caminho atualizado para a mesma pasta
 
 const app = express();
 const port = 3001; // Porta para a API
