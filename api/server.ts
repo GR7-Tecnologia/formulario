@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json());
 
 // Endpoint para verificar se o CPF já existe
-app.get('/api/employees/check-cpf/:cpf', async (req, res) => {
+app.get('/employees/check-cpf/:cpf', async (req, res) => {
   const { cpf } = req.params;
   // Garante que estamos comparando apenas os números
   const cleanedCpf = cpf.replace(/[.\-]/g, ''); 
@@ -31,7 +31,7 @@ app.get('/api/employees/check-cpf/:cpf', async (req, res) => {
 });
 
 // Endpoint para criar um novo funcionário
-app.post('/api/employees', async (req, res) => {
+app.post('/employees', async (req, res) => {
   const employee = req.body;
   // O ID será gerado automaticamente pelo banco de dados.
   // Removemos o campo ID do objeto para evitar conflitos.
@@ -51,7 +51,7 @@ app.post('/api/employees', async (req, res) => {
 });
 
 // Endpoint para listar todos os funcionários
-app.get('/api/employees', async (req, res) => {
+app.get('/employees', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM employees');
         res.status(200).json(rows);
