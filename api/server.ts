@@ -1,7 +1,8 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import pool from './lib/db'; // Caminho atualizado para a mesma pasta
+// Caminho atualizado para a mesma pasta, com extensão .js para compatibilidade com Vercel
+import pool from './lib/db.js'; 
 
 const app = express();
 const port = 3001; // Porta para a API
