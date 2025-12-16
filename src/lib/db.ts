@@ -1,11 +1,12 @@
 
 import mysql from 'mysql2/promise';
 
+// Use environment variables for database credentials
 const pool = mysql.createPool({
-  host: '193.203.175.194',
-  user: 'u969185416_funcionario',
-  database: 'u969185416_formulario',
-  password: 'Grupopw2025',
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  database: process.env.DB_DATABASE,
+  password: process.env.DB_PASSWORD,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
