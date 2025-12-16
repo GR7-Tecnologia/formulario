@@ -9,10 +9,11 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     proxy: {
+      // Qualquer requisição para /api será redirecionada para o servidor da API
       '/api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
+        target: 'http://localhost:3001', // O servidor da API
+        changeOrigin: true, // Necessário para o proxy funcionar corretamente
+        // A regra 'rewrite' foi removida para que o caminho completo (/api/...) seja enviado.
       },
     },
   },

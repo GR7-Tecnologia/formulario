@@ -1,23 +1,22 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-// Caminho atualizado para a mesma pasta, com extensão .js para compatibilidade com Vercel
-import pool from './lib/db.js'; 
+import pool from './lib/db.js';
 
 const app = express();
-const port = 3001; // Porta para a API local
+const port = 3001;
 
 app.use(cors());
 app.use(express.json());
 
-// Endpoint para verificar se o CPF já existe
-app.get('/employees/check-cpf/:cpf', async (req, res) => {
-  const { cpf } = req.params;
-  // Garante que estamos comparando apenas os números
-  const cleanedCpf = cpf.replace(/[.\-]/g, ''); 
-  
-  const query = 'SELECT id FROM employees WHERE cpf = ?';
+// 1. Criar um roteador para a API
+const apiRouter = express.Router();
 
+// 2. Definir todas as rotas no roteador, SEM o prefixo /api
+apiRouter.get('/employees/check-cpf/:cpf', async (req, res) => {
+  const { cpf } = req.params;
+  const cleanedCpf = cpf.replace(/[.\-]/g, '');
+  const query = 'SELECT id FROM employees WHERE cpf = ?';
   try {
     const [rows] = await pool.query(query, [cleanedCpf]);
     if (Array.isArray(rows) && rows.length > 0) {
@@ -31,18 +30,12 @@ app.get('/employees/check-cpf/:cpf', async (req, res) => {
   }
 });
 
-// Endpoint para criar um novo funcionário
-app.post('/employees', async (req, res) => {
+apiRouter.post('/employees', async (req, res) => {
   const employee = req.body;
-  // O ID será gerado automaticamente pelo banco de dados.
-  // Removemos o campo ID do objeto para evitar conflitos.
-  delete employee.id; 
-  
+  delete employee.id;
   const query = 'INSERT INTO employees SET ?';
-  
   try {
     const [result] = await pool.query(query, employee);
-    // A biblioteca mysql2 retorna um objeto com a propriedade insertId
     const insertId = (result as any).insertId;
     res.status(201).send({ message: 'Funcionário cadastrado com sucesso!', employeeId: insertId });
   } catch (error) {
@@ -51,21 +44,26 @@ app.post('/employees', async (req, res) => {
   }
 });
 
-// Endpoint para listar todos os funcionários
-app.get('/employees', async (req, res) => {
-    try {
-        const [rows] = await pool.query('SELECT * FROM employees');
-        res.status(200).json(rows);
-    } catch (error) {
-        console.error('Erro ao buscar funcionários:', error);
-        res.status(500).send({ message: 'Erro no servidor ao buscar funcionários.', error });
-    }
+apiRouter.get('/employees', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM employees');
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error('Erro ao buscar funcionários:', error);
+    res.status(500).send({ message: 'Erro no servidor ao buscar funcionários.', error });
+  }
 });
 
-// Inicia o servidor para desenvolvimento local
-app.listen(port, () => {
-  console.log(`API Server is running on http://localhost:${port}`);
-});
+// 3. Usar o roteador no aplicativo principal com o prefixo /api
+// Qualquer chamada para /api/* será tratada pelo apiRouter
+app.use('/api', apiRouter);
 
-// Export the app for Vercel
+// Inicia o servidor apenas para desenvolvimento local. Vercel ignora isso.
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(port, () => {
+    console.log(`API Server is running on http://localhost:${port}`);
+  });
+}
+
+// Exporta o app para a Vercel
 export default app;
