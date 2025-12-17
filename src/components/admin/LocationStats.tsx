@@ -17,21 +17,28 @@ interface LocationStatsProps {
 export function LocationStats({ employees }: LocationStatsProps) {
   const employeesByNeighborhood = Object.entries(
     employees.reduce((acc, emp) => {
-      acc[emp.neighborhood] = (acc[emp.neighborhood] || 0) + 1;
+      if (emp.neighborhood && emp.city) {
+        const key = `${emp.neighborhood}, ${emp.city}`;
+        acc[key] = (acc[key] || 0) + 1;
+      }
       return acc;
     }, {} as Record<string, number>)
   ).sort((a, b) => b[1] - a[1]);
 
   const employeesByCity = Object.entries(
     employees.reduce((acc, emp) => {
-      acc[emp.city] = (acc[emp.city] || 0) + 1;
+      if (emp.birthPlace) {
+        acc[emp.birthPlace] = (acc[emp.birthPlace] || 0) + 1;
+      }
       return acc;
     }, {} as Record<string, number>)
   ).sort((a, b) => b[1] - a[1]);
 
   const employeesByState = Object.entries(
     employees.reduce((acc, emp) => {
-      acc[emp.state] = (acc[emp.state] || 0) + 1;
+      if (emp.birthPlaceState) {
+        acc[emp.birthPlaceState] = (acc[emp.birthPlaceState] || 0) + 1;
+      }
       return acc;
     }, {} as Record<string, number>)
   ).sort((a, b) => b[1] - a[1]);
@@ -50,7 +57,7 @@ export function LocationStats({ employees }: LocationStatsProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Bairro</TableHead>
+                <TableHead>Bairro / Cidade</TableHead>
                 <TableHead className="text-right w-20">Qtd</TableHead>
               </TableRow>
             </TableHeader>
@@ -84,7 +91,7 @@ export function LocationStats({ employees }: LocationStatsProps) {
         <CardHeader className="pb-2">
           <CardTitle className="text-lg flex items-center gap-2">
             <Building className="h-5 w-5 text-destructive" />
-            Por Cidade
+            Por Cidade de Nascimento
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -125,7 +132,7 @@ export function LocationStats({ employees }: LocationStatsProps) {
         <CardHeader className="pb-2">
           <CardTitle className="text-lg flex items-center gap-2">
             <Map className="h-5 w-5 text-accent-foreground" />
-            Por Estado
+            Por Estado de Nascimento
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">

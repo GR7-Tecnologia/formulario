@@ -12,6 +12,31 @@ app.use(express.json());
 // 1. Criar um roteador para a API
 const apiRouter = express.Router();
 
+// Rota de Login
+apiRouter.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).send({ message: 'Usuário e senha são obrigatórios.' });
+  }
+
+  const query = 'SELECT * FROM users WHERE username = ? AND password = ?';
+
+  try {
+    const [rows] = await pool.query(query, [username, password]);
+
+    if (Array.isArray(rows) && rows.length > 0) {
+      res.status(200).send({ message: 'Login bem-sucedido!' });
+    } else {
+      res.status(401).send({ message: 'Usuário ou senha inválidos.' });
+    }
+  } catch (error) {
+    console.error('Erro ao fazer login:', error);
+    res.status(500).send({ message: 'Erro no servidor ao fazer login.', error });
+  }
+});
+
+
 // 2. Definir todas as rotas no roteador, SEM o prefixo /api
 apiRouter.get('/employees/check-cpf/:cpf', async (req, res) => {
   const { cpf } = req.params;

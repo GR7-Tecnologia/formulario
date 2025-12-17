@@ -98,13 +98,13 @@ const baseEmployeeSchema = z.object({
   bank: z.string().min(2, "Banco é obrigatório"),
   pixKey: z.string().min(1, "Chave PIX é obrigatória"),
   pixType: z.string().min(1, "Tipo de chave PIX é obrigatório"),
-  emergencyContactName: z.string().min(3, "Nome do contato de emergência é obrigatório"),
-  emergencyContactPhone: z.string().min(10, "Telefone de emergência inválido"),
-  emergencyContactRelation: z.string().min(1, "Parentesco é obrigatório"),
+  emergencyName: z.string().min(3, "Nome do contato de emergência é obrigatório"),
+  emergencyPhone: z.string().min(10, "Telefone de emergência inválido"),
+  emergencyRelation: z.string().min(1, "Parentesco é obrigatório"),
   bloodType: z.string().min(1, "Tipo sanguíneo é obrigatório"),
   maritalStatus: z.string().min(1, "Estado civil é obrigatório"),
   hasChildren: z.string().min(1, "Informe se possui filhos"),
-  numberOfChildren: z.string().optional(),
+  childrenCount: z.string().optional(),
   workUnit: z.string().min(1, "Unidade de trabalho é obrigatória"),
 });
 
@@ -125,6 +125,17 @@ const refinedEmployeeSchema = baseEmployeeSchema.superRefine((data, ctx) => {
     }
     if (!data.foreignState || data.foreignState.length < 2) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['foreignState'], message: 'Estado/Província é obrigatório' });
+    }
+  }
+
+  if (data.hasChildren === 'sim') {
+    const childrenCount = parseInt(data.childrenCount || '0', 10);
+    if (isNaN(childrenCount) || childrenCount < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['childrenCount'],
+        message: 'Número de filhos deve ser maior que zero.',
+      });
     }
   }
 });
@@ -227,28 +238,12 @@ export function EmployeeForm() {
   };
 
   const onSubmit = async (data: EmployeeFormData) => {
+    const hasChildrenBool = data.hasChildren === "sim";
     const employeeData = {
-      fullName: data.fullName,
+      ...data,
       cpf: data.cpf.replace(/[.\-]/g, ''),
-      birthDate: data.birthDate,
-      nationality: data.nationality,
-      street: data.street,
-      number: data.number,
-      complement: data.complement,
-      neighborhood: data.neighborhood,
-      zipCode: data.zipCode,
-      city: data.city,
-      state: data.state,
-      bank: data.bank,
-      pixKey: data.pixKey,
-      pixType: data.pixType,
-      emergencyName: data.emergencyContactName,
-      emergencyPhone: data.emergencyContactPhone,
-      emergencyRelation: data.emergencyContactRelation,
-      bloodType: data.bloodType,
-      maritalStatus: data.maritalStatus,
-      hasChildren: data.hasChildren === "sim",
-      workUnit: data.workUnit,
+      hasChildren: hasChildrenBool,
+      childrenCount: hasChildrenBool ? parseInt(data.childrenCount || '0', 10) : null,
       birthPlace: data.nationality === 'Brasileira' ? data.birthPlace : null,
       birthPlaceState: data.nationality === 'Brasileira' ? data.birthPlaceState : null,
       foreignCountry: data.nationality === 'Estrangeira' ? data.foreignCountry : null,
@@ -356,10 +351,10 @@ export function EmployeeForm() {
           
           <div className="grid grid-cols-3 gap-3">
             <div className="input-group col-span-2"><Label htmlFor="street">Rua / Logradouro *</Label><Input id="street" placeholder="Ex: Rua Principal" {...register("street")} />{pError(errors.street?.message)}</div>
-            <div className="input-group"><Label htmlFor="number">Número</Label><Input id="number" placeholder="123A" {...register("number")} />{pError(errors.number?.message)}</div>
+            <div className="input-group"><Label htmlFor="number">Número</Label><Input id="number" placeholder="123" {...register("number")} />{pError(errors.number?.message)}</div>
           </div>
           
-          <div className="input-group"><Label htmlFor="complement">Complemento</Label><Input id="complement" placeholder="Apto 101, Bloco C" {...register("complement")} />{pError(errors.complement?.message)}</div>
+          <div className="input-group"><Label htmlFor="complement">Complemento</Label><Input id="complement" placeholder="Casa A, Apto 101, Bloco C" {...register("complement")} />{pError(errors.complement?.message)}</div>
           <div className="input-group"><Label htmlFor="neighborhood">Bairro *</Label><Input id="neighborhood" placeholder="Bairro" {...register("neighborhood")} />{pError(errors.neighborhood?.message)}</div>
           
           <div className="grid grid-cols-2 gap-3">
@@ -389,9 +384,9 @@ export function EmployeeForm() {
       <section className="form-section animate-fade-in" style={{ animationDelay: "0.2s" }}>
         <h2 className="form-section-title"><Phone className="w-5 h-5 text-primary" />Contato de Emergência</h2>
         <div className="space-y-4">
-          <div className="input-group"><Label htmlFor="emergencyContactName">Nome do Contato *</Label><Input id="emergencyContactName" placeholder="Nome completo" {...register("emergencyContactName")} />{pError(errors.emergencyContactName?.message)}</div>
-          <div className="input-group"><Label htmlFor="emergencyContactPhone">Telefone *</Label><Input id="emergencyContactPhone" type="tel" placeholder="(00) 00000-0000" {...register("emergencyContactPhone")} />{pError(errors.emergencyContactPhone?.message)}</div>
-          <div className="input-group"><Label htmlFor="emergencyContactRelation">Parentesco *</Label><Select onValueChange={(value) => setValue("emergencyContactRelation", value)}><SelectTrigger className="h-12"><SelectValue placeholder="Selecione o parentesco" /></SelectTrigger><SelectContent>{relations.map((relation) => <SelectItem key={relation} value={relation}>{relation}</SelectItem>)}</SelectContent></Select>{pError(errors.emergencyContactRelation?.message)}</div>
+          <div className="input-group"><Label htmlFor="emergencyName">Nome do Contato *</Label><Input id="emergencyName" placeholder="Nome completo" {...register("emergencyName")} />{pError(errors.emergencyName?.message)}</div>
+          <div className="input-group"><Label htmlFor="emergencyPhone">Telefone *</Label><Input id="emergencyPhone" type="tel" placeholder="(00) 00000-0000" {...register("emergencyPhone")} />{pError(errors.emergencyPhone?.message)}</div>
+          <div className="input-group"><Label htmlFor="emergencyRelation">Parentesco *</Label><Select onValueChange={(value) => setValue("emergencyRelation", value)}><SelectTrigger className="h-12"><SelectValue placeholder="Selecione o parentesco" /></SelectTrigger><SelectContent>{relations.map((relation) => <SelectItem key={relation} value={relation}>{relation}</SelectItem>)}</SelectContent></Select>{pError(errors.emergencyRelation?.message)}</div>
         </div>
       </section>
 
@@ -409,7 +404,7 @@ export function EmployeeForm() {
         <div className="space-y-4">
           <div className="input-group"><Label>Estado Civil *</Label><Select onValueChange={(value) => setValue("maritalStatus", value)}><SelectTrigger className="h-12"><Users className="w-5 h-5 text-muted-foreground mr-2" /><SelectValue placeholder="Selecione o estado civil" /></SelectTrigger><SelectContent>{maritalStatuses.map((status) => <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>)}</SelectContent></Select>{pError(errors.maritalStatus?.message)}</div>
           <div className="input-group"><Label>Possui filhos? *</Label><RadioGroup className="flex gap-4 mt-2" onValueChange={(value) => setValue("hasChildren", value)}>{pError(errors.hasChildren?.message)}<label className="flex items-center gap-3 flex-1 h-12 px-4 rounded-lg border-2 border-input bg-card cursor-pointer transition-all hover:border-primary/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5"><RadioGroupItem value="sim" id="children-yes" /><span className="font-medium">Sim</span></label><label className="flex items-center gap-3 flex-1 h-12 px-4 rounded-lg border-2 border-input bg-card cursor-pointer transition-all hover:border-primary/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5"><RadioGroupItem value="nao" id="children-no" /><span className="font-medium">Não</span></label></RadioGroup></div>
-          {watchHasChildren === "sim" && (<div className="input-group animate-fade-in"><Label htmlFor="numberOfChildren">Quantos filhos? *</Label><div className="relative"><Baby className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" /><Input id="numberOfChildren" type="number" min="1" placeholder="Número de filhos" className="pl-10" {...register("numberOfChildren")} /></div></div>)}
+          {watchHasChildren === "sim" && (<div className="input-group animate-fade-in"><Label htmlFor="childrenCount">Quantos filhos? *</Label><div className="relative"><Baby className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" /><Input id="childrenCount" type="number" min="1" placeholder="Número de filhos" className="pl-10" {...register("childrenCount")} /></div>{pError(errors.childrenCount?.message)}</div>)}
         </div>
       </section>
 

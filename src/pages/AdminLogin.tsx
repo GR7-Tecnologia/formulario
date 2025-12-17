@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,7 +15,7 @@ const AdminLogin = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -25,12 +24,26 @@ const AdminLogin = () => {
       return;
     }
 
-    if (username === 'admin' && password === 'admin123') {
-      login();
-      toast.success("Login realizado com sucesso!");
-      navigate("/admin");
-    } else {
-      setError("Usuário ou senha incorretos");
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        login();
+        toast.success("Login realizado com sucesso!");
+        navigate("/admin");
+      } else {
+        setError(data.message || "Ocorreu um erro ao tentar fazer login.");
+      }
+    } catch (err) {
+      setError("Não foi possível conectar ao servidor. Tente novamente mais tarde.");
     }
   };
 
@@ -89,7 +102,7 @@ const AdminLogin = () => {
           </form>
 
           <p className="text-xs text-muted-foreground text-center mt-4">
-            Credenciais de teste: admin / admin123
+            Use as credenciais fornecidas pelo administrador.
           </p>
         </CardContent>
       </Card>

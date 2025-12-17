@@ -32,6 +32,12 @@ const formatDate = (dateStr: string) => {
 };
 
 export function generateEmployeePDF(employee: Employee) {
+  const placeOfBirth = employee.foreignCountry
+    ? [employee.foreignCity, employee.foreignState, employee.foreignCountry].filter(Boolean).join(', ')
+    : employee.birthPlace
+      ? `${employee.birthPlace} - ${employee.birthPlaceState}`
+      : '-';
+
   const content = `
 <!DOCTYPE html>
 <html>
@@ -74,7 +80,7 @@ export function generateEmployeePDF(employee: Employee) {
       </div>
       <div class="field">
         <div class="field-label">Naturalidade</div>
-        <div class="field-value">${employee.birthPlace} - ${employee.birthPlaceState}</div>
+        <div class="field-value">${placeOfBirth}</div>
       </div>
     </div>
   </div>
@@ -150,7 +156,7 @@ export function generateEmployeePDF(employee: Employee) {
       </div>
       <div class="field">
         <div class="field-label">Filhos</div>
-        <div class="field-value">${employee.hasChildren ? `Sim (${employee.numberOfChildren})` : "Não"}</div>
+        <div class="field-value">${employee.hasChildren ? `Sim (${employee.childrenCount})` : "Não"}</div>
       </div>
     </div>
   </div>
@@ -183,8 +189,20 @@ export function generateAllEmployeesPDF(employees: Employee[]) {
       <td>${emp.city}/${emp.state}</td>
       <td>${emp.bloodType === "unknown" ? "N/I" : emp.bloodType}</td>
       <td>${maritalStatusLabels[emp.maritalStatus]}</td>
-      <td>${emp.hasChildren ? emp.numberOfChildren : "-"}</td>
+      <td>${emp.hasChildren ? emp.childrenCount : "-"}</td>
     </tr>
+  `).join("");
+
+  const employeesByUnit = employees.reduce((acc, emp) => {
+    acc[emp.workUnit] = (acc[emp.workUnit] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const unitSummaryHtml = Object.entries(employeesByUnit).map(([unit, count]) => `
+    <div class="summary-item">
+      <div class="summary-value">${count}</div>
+      <div class="summary-label">${unit}</div>
+    </div>
   `).join("");
 
   const content = `
@@ -204,8 +222,10 @@ export function generateAllEmployeesPDF(employees: Employee[]) {
     td { padding: 8px; border-bottom: 1px solid #e5e7eb; }
     tr:nth-child(even) { background: #f9fafb; }
     .summary { margin-top: 30px; padding: 20px; background: #f3f4f6; border-radius: 8px; }
-    .summary h3 { margin-bottom: 10px; color: #4f46e5; }
-    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+    .summary h3 { margin-bottom: 15px; color: #4f46e5; }
+    .summary-section { margin-bottom: 20px; }
+    .summary-section h4 { font-size: 14px; font-weight: bold; margin-bottom: 10px; color: #333; }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; }
     .summary-item { text-align: center; }
     .summary-value { font-size: 24px; font-weight: bold; color: #4f46e5; }
     .summary-label { font-size: 12px; color: #666; }
@@ -236,22 +256,18 @@ export function generateAllEmployeesPDF(employees: Employee[]) {
 
   <div class="summary">
     <h3>Resumo</h3>
-    <div class="summary-grid">
-      <div class="summary-item">
-        <div class="summary-value">${employees.length}</div>
-        <div class="summary-label">Total de Funcionários</div>
+    <div class="summary-section">
+      <div class="summary-grid">
+        <div class="summary-item">
+          <div class="summary-value">${employees.length}</div>
+          <div class="summary-label">Total de Funcionários</div>
+        </div>
       </div>
-      <div class="summary-item">
-        <div class="summary-value">${[...new Set(employees.map(e => e.workUnit))].length}</div>
-        <div class="summary-label">Unidades</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-value">${employees.filter(e => e.hasChildren).length}</div>
-        <div class="summary-label">Com Filhos</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-value">${employees.reduce((acc, e) => acc + (e.numberOfChildren || 0), 0)}</div>
-        <div class="summary-label">Total de Filhos</div>
+    </div>
+    <div class="summary-section">
+      <h4>Total por Unidade</h4>
+      <div class="summary-grid">
+        ${unitSummaryHtml}
       </div>
     </div>
   </div>

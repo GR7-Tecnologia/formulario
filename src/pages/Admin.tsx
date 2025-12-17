@@ -1,13 +1,31 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardStats } from "@/components/admin/DashboardStats";
 import { EmployeeTable } from "@/components/admin/EmployeeTable";
-import { mockEmployees } from "@/types/employee";
+import { Employee } from "@/types/employee";
 import { LayoutDashboard, Users } from "lucide-react";
 
 const Admin = () => {
-  const [employees] = useState(mockEmployees);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const response = await fetch("/api/employees");
+        if (response.ok) {
+          const data = await response.json();
+          setEmployees(data);
+        } else {
+          console.error("Erro ao buscar funcionários:", response.statusText);
+        }
+      } catch (error) {
+        console.error("Falha ao conectar com o servidor para buscar funcionários:", error);
+      }
+    };
+
+    fetchEmployees();
+  }, []); // O array vazio garante que o efeito rode apenas uma vez
 
   return (
     <div className="min-h-screen bg-background">
@@ -18,7 +36,7 @@ const Admin = () => {
           <p className="text-muted-foreground">Gerencie os dados dos funcionários</p>
         </div>
 
-        <Tabs defaultValue="dashboard" className="space-y-6">
+        <Tabs defaultValue="employees" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2 max-w-md">
             <TabsTrigger value="dashboard" className="gap-2">
               <LayoutDashboard className="h-4 w-4" />

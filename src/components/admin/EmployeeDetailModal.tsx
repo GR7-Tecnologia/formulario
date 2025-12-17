@@ -50,6 +50,12 @@ export function EmployeeDetailModal({ employee, onClose }: EmployeeDetailModalPr
     return date.toLocaleDateString("pt-BR");
   };
 
+  const placeOfBirth = employee.foreignCountry
+    ? [employee.foreignCity, employee.foreignState, employee.foreignCountry].filter(Boolean).join(', ')
+    : employee.birthPlace
+      ? `${employee.birthPlace} - ${employee.birthPlaceState}`
+      : '-';
+
   return (
     <Dialog open={!!employee} onOpenChange={() => onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -86,7 +92,7 @@ export function EmployeeDetailModal({ employee, onClose }: EmployeeDetailModalPr
               </div>
               <div>
                 <span className="text-muted-foreground">Naturalidade</span>
-                <p className="font-medium">{employee.birthPlace} - {employee.birthPlaceState}</p>
+                <p className="font-medium">{placeOfBirth}</p>
               </div>
             </div>
           </section>
@@ -180,7 +186,7 @@ export function EmployeeDetailModal({ employee, onClose }: EmployeeDetailModalPr
               <div>
                 <span className="text-muted-foreground">Filhos</span>
                 <p className="font-medium">
-                  {employee.hasChildren ? `Sim (${employee.numberOfChildren})` : "Não"}
+                  {employee.hasChildren ? `Sim (${employee.childrenCount})` : "Não"}
                 </p>
               </div>
             </div>

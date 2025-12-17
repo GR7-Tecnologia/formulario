@@ -4,23 +4,36 @@ export interface Employee {
   cpf: string;
   birthDate: string;
   nationality: string;
-  birthPlace: string;
-  birthPlaceState: string;
+
+  // For Brazilians
+  birthPlace?: string;
+  birthPlaceState?: string;
+
+  // For Foreigners
+  foreignCountry?: string;
+  foreignState?: string;
+  foreignCity?: string;
+
   street: string;
   neighborhood: string;
   zipCode: string;
   city: string;
   state: string;
+
   pixKey: string;
   pixType: string;
   bank: string;
+
   emergencyName: string;
   emergencyPhone: string;
   emergencyRelation: string;
+
   bloodType: string;
   maritalStatus: string;
+
   hasChildren: boolean;
-  numberOfChildren?: number;
+  childrenCount?: number; // Updated from numberOfChildren
+
   workUnit: string;
   updatedAt: string;
 }
@@ -48,7 +61,7 @@ export const mockEmployees: Employee[] = [
     bloodType: "O+",
     maritalStatus: "married",
     hasChildren: true,
-    numberOfChildren: 2,
+    childrenCount: 2,
     workUnit: "DaVinci Hotel",
     updatedAt: "2024-12-10"
   },
@@ -99,7 +112,7 @@ export const mockEmployees: Employee[] = [
     bloodType: "B-",
     maritalStatus: "divorced",
     hasChildren: true,
-    numberOfChildren: 1,
+    childrenCount: 1,
     workUnit: "Aphrodite Park Motel",
     updatedAt: "2024-12-08"
   },
@@ -125,7 +138,7 @@ export const mockEmployees: Employee[] = [
     bloodType: "AB+",
     maritalStatus: "married",
     hasChildren: true,
-    numberOfChildren: 3,
+    childrenCount: 3,
     workUnit: "Chateau Motel",
     updatedAt: "2024-12-07"
   },
@@ -176,7 +189,7 @@ export const mockEmployees: Employee[] = [
     bloodType: "O-",
     maritalStatus: "widowed",
     hasChildren: true,
-    numberOfChildren: 1,
+    childrenCount: 1,
     workUnit: "DaVinci Hotel",
     updatedAt: "2024-12-05"
   }
