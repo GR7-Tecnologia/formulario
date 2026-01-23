@@ -79,9 +79,13 @@ apiRouter.get('/employees', async (req, res) => {
   }
 });
 
-// 3. Usar o roteador no aplicativo principal com o prefixo /api
-// Qualquer chamada para /api/* será tratada pelo apiRouter
-app.use('/api', apiRouter);
+// 3. Usar o roteador no aplicativo principal.
+// Na Vercel, as solicitações para /api/* são reescritas e o prefixo /api é removido
+// antes de chegar a esta função do servidor. Ao montar o roteador na raiz,
+// as rotas como '/login' e '/employees' funcionarão como esperado.
+// Para desenvolvimento local, isso significa que seus endpoints de API estarão
+// em http://localhost:3001/login, etc., em vez de http://localhost:3001/api/login.
+app.use(apiRouter);
 
 // Inicia o servidor apenas para desenvolvimento local. Vercel ignora isso.
 if (process.env.NODE_ENV !== 'production') {
