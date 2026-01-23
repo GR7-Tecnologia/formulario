@@ -9,7 +9,6 @@ const port = 3001;
 app.use(cors());
 app.use(express.json());
 
-// 1. Criar um roteador para a API
 const apiRouter = express.Router();
 
 // Rota de Login
@@ -36,8 +35,7 @@ apiRouter.post('/login', async (req, res) => {
   }
 });
 
-
-// 2. Definir todas as rotas no roteador, SEM o prefixo /api
+// Rotas de Funcionários
 apiRouter.get('/employees/check-cpf/:cpf', async (req, res) => {
   const { cpf } = req.params;
   const cleanedCpf = cpf.replace(/[.\-]/g, '');
@@ -79,13 +77,11 @@ apiRouter.get('/employees', async (req, res) => {
   }
 });
 
-// 3. Usar o roteador no aplicativo principal.
-// Na Vercel, as solicitações para /api/* são reescritas e o prefixo /api é removido
-// antes de chegar a esta função do servidor. Ao montar o roteador na raiz,
-// as rotas como '/login' e '/employees' funcionarão como esperado.
-// Para desenvolvimento local, isso significa que seus endpoints de API estarão
-// em http://localhost:3001/login, etc., em vez de http://localhost:3001/api/login.
-app.use(apiRouter);
+// Usa o roteador com o prefixo /api
+// A configuração no vercel.json garante que as requisições para /api/*
+// cheguem a este servidor com o caminho completo.
+app.use('/api', apiRouter);
+
 
 // Inicia o servidor apenas para desenvolvimento local. Vercel ignora isso.
 if (process.env.NODE_ENV !== 'production') {
